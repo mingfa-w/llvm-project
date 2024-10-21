@@ -1,6 +1,7 @@
 # This is a script to help install LLVM 11.0.1
+echo command: $*
 current_dir=$(cd $(dirname $0); pwd)
-export rebuild=$1 # 0-重新编译llvm-project
+export rebuild=0 # 1-重新编译
 TARGET_ARCH=`uname -m`
 LLVM_MAJ_VER=triton-d39ee1f9-llvm-61f8a7f6
 
@@ -10,9 +11,29 @@ llvm_build_dir=${current_dir}/build/llvm-$LLVM_MAJ_VER-$TARGET_ARCH
 llvm_install_dir=${HOME}/.local/llvm-$LLVM_MAJ_VER-$TARGET_ARCH
 llvm_dir=${llvm_install_dir}/lib/cmake/llvm
 
+while getopts "rp:" opt
+do
+    case $opt in
+        r)
+            echo "选项 -r 被设置"
+            rebuild=1
+            ;;
+        p)
+            echo "选项 -p 的值是 $OPTARG"
+            llvm_install_dir=$OPTARG
+            ;;
+        \?)
+            echo "无效选项: -$OPTARG" >&2
+            exit 1
+            ;;
+    esac
+done
+
+echo llvm_install_dir=${llvm_install_dir}
+
 function build_llvm(){
     # 如果参数为0，则删除build目录，重新生成makefile，再编译
-    if [ ! -z $rebuild ] && [ $rebuild == 0 ]; then
+    if [ ! -z $rebuild ] && [ $rebuild == 1 ]; then
         echo ==== restrat to build llvm-project, please input: y/n ====
         # read input
         input='y'
