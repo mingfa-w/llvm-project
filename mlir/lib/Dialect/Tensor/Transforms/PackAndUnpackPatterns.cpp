@@ -26,12 +26,16 @@ static bool areAllConstantIntValue(ArrayRef<OpFoldResult> ofrs, int64_t value) {
 struct SimplifyPackToExpandShape : public OpRewritePattern<PackOp> {
   using OpRewritePattern<PackOp>::OpRewritePattern;
 
-  Value insertExpand(RewriterBase &rewriter, Location loc, Value operand,
-                     Type newOperandType, ArrayAttr reassociation) const {
+  FailureOr<Value>
+  insertExpand(RewriterBase &rewriter, Location loc, Value operand,
+               Type newOperandType,
+               ArrayRef<ReassociationIndices> reassociation) const {
     if (operand.getType() == newOperandType)
       return operand;
-    return rewriter.create<tensor::ExpandShapeOp>(loc, newOperandType, operand,
-                                                  reassociation);
+    return rewriter
+        .create<tensor::ExpandShapeOp>(loc, newOperandType, operand,
+                                       reassociation)
+        .getResult();
   }
 
   LogicalResult matchAndRewrite(PackOp packOp,
@@ -58,10 +62,14 @@ struct SimplifyPackToExpandShape : public OpRewritePattern<PackOp> {
         getReassociationIndicesForReshape(sourceType, destType);
     if (!reassociation)
       return failure();
-    Value expanded = insertExpand(
-        rewriter, packOp.getLoc(), packOp.getSource(), destType,
-        getReassociationIndicesAttribute(rewriter, *reassociation));
-    rewriter.replaceOp(packOp, expanded);
+    FailureOr<Value> expanded =
+        insertExpand(rewriter, packOp.getLoc(), packOp.getSource(), destType,
+                     *reassociation);
+    if (failed(expanded)) {
+      return rewriter.notifyMatchFailure(
+          packOp, "unable to expand source of tensor.pack");
+    }
+    rewriter.replaceOp(packOp, *expanded);
     return success();
   }
 };
