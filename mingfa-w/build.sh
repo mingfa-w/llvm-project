@@ -11,9 +11,15 @@ llvm_build_dir=${current_dir}/build/llvm-$LLVM_MAJ_VER-$TARGET_ARCH
 llvm_install_dir=${HOME}/.local/llvm-$LLVM_MAJ_VER-$TARGET_ARCH
 llvm_dir=${llvm_install_dir}/lib/cmake/llvm
 
-while getopts "rp:" opt
+BUILD_TYPE="Release"
+
+while getopts "t:rp:" opt
 do
     case $opt in
+        t)
+            echo "选项 -t 的值是 $OPTARG"
+            BUILD_TYPE=$OPTARG
+            ;;
         r)
             echo "选项 -r 被设置"
             rebuild=1
@@ -28,7 +34,7 @@ do
             ;;
     esac
 done
-
+echo BUILD_TYPE=$BUILD_TYPE
 echo llvm_install_dir=${llvm_install_dir}
 
 function build_llvm(){
@@ -72,7 +78,7 @@ function build_llvm(){
 
         cmake -G Ninja -S ${llvm_src_dir}/llvm -B ${llvm_build_dir} \
                 -DCMAKE_OSX_ARCHITECTURES=$TARGET_ARCH \
-                -DCMAKE_BUILD_TYPE="Release" \
+                -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
                 -DCMAKE_CXX_STANDARD=17 \
                 -DCMAKE_INSTALL_PREFIX=${llvm_install_dir} \
                 ${LLVM_OPTS} \
